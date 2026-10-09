@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DEVJOURN Quizizz Review</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero" id="startScreen">
+        <div class="brand-row">
+          <div class="logo-mark">Q</div>
+          <div>
+            <p class="eyebrow">Development Journalism Reviewer</p>
+            <h1>DEVJOURN Quizizz Review</h1>
+          </div>
+        </div>
+
+        <div class="hero-grid">
+          <div class="intro-panel">
+            <p class="lead">
+              Practice development journalism and development communication concepts with points,
+              streaks, shuffled choices, matching, instant feedback, and explanations after every answer.
+            </p>
+
+            <div class="setup-grid">
+              <label>
+                Questions
+                <select id="questionCount">
+                  <option value="10">10 quick</option>
+                  <option value="20" selected>20 standard</option>
+                  <option value="40">40 long run</option>
+                  <option value="all">All available</option>
+                </select>
+              </label>
+
+              <label>
+                Timer
+                <select id="timerMode">
+                  <option value="20">20 seconds</option>
+                  <option value="30" selected>30 seconds</option>
+                  <option value="45">45 seconds</option>
+                  <option value="0">No timer</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="topic-picker" aria-label="Topic filters">
+              <button class="topic-chip active" data-topic="all" type="button">All Lessons</button>
+              <button class="topic-chip" data-topic="Lesson 1" type="button">Lesson 1</button>
+              <button class="topic-chip" data-topic="Lesson 2" type="button">Lesson 2</button>
+              <button class="topic-chip" data-topic="Lesson 3" type="button">Lesson 3</button>
+              <button class="topic-chip" data-topic="Lesson 4" type="button">Lesson 4</button>
+              <button class="topic-chip" data-topic="Development Journalism" type="button">DevJourn</button>
+              <button class="topic-chip" data-topic="Press Theories" type="button">Press Theories</button>
+              <button class="topic-chip" data-topic="DevComm Theories" type="button">DevComm</button>
+              <button class="topic-chip" data-topic="ICT4D" type="button">ICT4D</button>
+              <button class="topic-chip" data-topic="Writing" type="button">Writing</button>
+            </div>
+
+            <div class="mode-options" aria-label="Question type options">
+              <label class="mode-toggle">
+                <input id="fillBlankMode" type="checkbox" />
+                <span>
+                  <strong>Fill in the blanks</strong>
+                  <small>Type the answer with no choices.</small>
+                </span>
+              </label>
+              <label class="mode-toggle">
+                <input id="definitionMode" type="checkbox" />
+                <span>
+                  <strong>Definition of terms</strong>
+                  <small>Guess the term from the explanation.</small>
+                </span>
+              </label>
+            </div>
+
+            <button class="primary-action" id="startBtn" type="button">
+              <span>Start Review</span>
+              <span aria-hidden="true">▶</span>
+            </button>
+            <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">
+              <span aria-hidden="true">♪</span>
+              <strong>Sound on</strong>
+            </button>
+          </div>
+
+          <div class="score-preview" aria-label="Game preview">
+            <div class="network-art">
+              <span></span><span></span><span></span><span></span>
+              <i></i><i></i><i></i>
+            </div>
+            <div class="preview-stat">
+              <strong id="bankSize">0</strong>
+              <span>questions loaded</span>
+            </div>
+            <div class="preview-stat">
+              <strong>+50</strong>
+              <span>streak bonus</span>
+            </div>
+            <div class="preview-stat">
+              <strong>Review</strong>
+              <span>missed answers at the end</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="quiz hidden" id="quizScreen">
+        <header class="quiz-topbar">
+          <div>
+            <p class="eyebrow" id="topicLabel">Topic</p>
+            <h2 id="questionProgress">Question 1 of 20</h2>
+          </div>
+          <div class="hud">
+            <div><span id="score">0</span><small>score</small></div>
+            <div><span id="streak">0</span><small>streak</small></div>
+            <div><span id="timer">30</span><small>sec</small></div>
+          </div>
+        </header>
+
+        <div class="progress-track">
+          <div id="progressBar"></div>
+        </div>
+
+        <article class="question-card">
+          <div class="question-meta">
+            <span id="topicBadge">DEVJOURN</span>
+            <span id="multiBadge" class="muted"></span>
+          </div>
+          <h3 id="questionText"></h3>
+          <div class="answers" id="answers"></div>
+          <div class="feedback hidden" id="feedback"></div>
+        </article>
+
+        <footer class="quiz-actions">
+          <button class="secondary-action" id="quitBtn" type="button">Quit</button>
+          <button class="primary-action small" id="nextBtn" type="button" disabled>Next</button>
+        </footer>
+      </section>
+
+      <section class="results hidden" id="resultsScreen">
+        <div class="results-hero">
+          <p class="eyebrow">Session Complete</p>
+          <h2 id="finalTitle">Nice run.</h2>
+          <div class="results-score">
+            <strong id="finalScore">0%</strong>
+            <span id="finalDetails"></span>
+          </div>
+          <div class="result-actions">
+            <button class="primary-action small" id="retryMissedBtn" type="button">Retry Missed</button>
+            <button class="secondary-action" id="restartBtn" type="button">New Quiz</button>
+          </div>
+        </div>
+        <div class="review-list" id="reviewList"></div>
+      </section>
+    </main>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
