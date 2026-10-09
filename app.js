@@ -8,8 +8,13 @@ const els = {
   resultsScreen: document.querySelector("#resultsScreen"),
   questionCount: document.querySelector("#questionCount"),
   timerMode: document.querySelector("#timerMode"),
+  topicSelect: document.querySelector("#topicSelect"),
+  topicSelectButton: document.querySelector("#topicSelectButton"),
+  topicSelectMenu: document.querySelector("#topicSelectMenu"),
   fillBlankMode: document.querySelector("#fillBlankMode"),
   definitionMode: document.querySelector("#definitionMode"),
+  identificationMode: document.querySelector("#identificationMode"),
+  enumerationMode: document.querySelector("#enumerationMode"),
   startBtn: document.querySelector("#startBtn"),
   soundToggle: document.querySelector("#soundToggle"),
   quitBtn: document.querySelector("#quitBtn"),
@@ -43,7 +48,7 @@ const state = {
   streak: 0,
   selected: new Set(),
   answered: false,
-  topic: "all",
+  topics: new Set(["all"]),
   timerSeconds: 30,
   tick: null,
   timeLeft: 30,
@@ -273,7 +278,9 @@ function showOnly(screen) {
 
 function filteredBaseBank() {
   let bank = state.allQuestions;
-  if (state.topic !== "all") bank = bank.filter((q) => q.topic === state.topic || q.module === state.topic);
+  if (!state.topics.has("all")) {
+    bank = bank.filter((q) => state.topics.has(q.topic) || state.topics.has(q.module));
+  }
   return bank;
 }
 
@@ -287,6 +294,14 @@ function buildPracticeBank() {
 
   if (els.definitionMode.checked) {
     extras.push(...base.filter(canMakeDefinitionQuestion).map(makeDefinitionQuestion));
+  }
+
+  if (els.identificationMode.checked) {
+    extras.push(...base.filter(canMakeIdentificationQuestion).map(makeIdentificationQuestion));
+  }
+
+  if (els.enumerationMode.checked) {
+    extras.push(...base.filter(canMakeEnumerationQuestion).map(makeEnumerationQuestion));
   }
 
   return [...base, ...extras];
@@ -308,6 +323,18 @@ function canMakeDefinitionQuestion(q) {
   if (wordCount > 3 || answer.length > 32) return false;
   if (/[#]|access-list|Router\(|\d+\.\d+\.\d+\.\d+|\/\d+/i.test(answer)) return false;
   return definitionClue(q).length >= 35;
+}
+
+function canMakeIdentificationQuestion(q) {
+  if (!canMakeTypedQuestion(q)) return false;
+  const answer = shortTypedAnswers(q)[0];
+  const wordCount = answer.split(/\s+/).length;
+  return wordCount <= 3 && answer.length <= 32 && definitionClue(q).length >= 35;
+}
+
+function canMakeEnumerationQuestion(q) {
+  const answers = enumerationAnswers(q);
+  return q.gradable && answers.length >= 2 && answers.length <= 8;
 }
 
 function makeFillBlankQuestion(q) {
@@ -338,6 +365,33 @@ function makeDefinitionQuestion(q) {
   };
 }
 
+function makeIdentificationQuestion(q) {
+  return {
+    ...q,
+    id: `${q.id || `${q.module}-${q.number}`}-identification`,
+    question: `Identification\n\n${definitionClue(q)}`,
+    choices: [],
+    matching: null,
+    mode: "identification",
+    typedAnswers: shortTypedAnswers(q),
+    sourceMode: "Identification"
+  };
+}
+
+function makeEnumerationQuestion(q) {
+  const typedAnswers = enumerationAnswers(q);
+  return {
+    ...q,
+    id: `${q.id || `${q.module}-${q.number}`}-enumeration`,
+    question: `${q.question}\n\nEnumerate the answers. Separate each answer with a comma.`,
+    choices: [],
+    matching: null,
+    mode: "enumeration",
+    typedAnswers,
+    sourceMode: "Enumeration"
+  };
+}
+
 function shortTypedAnswers(q) {
   const answer = q.answers[0]?.trim();
   if (!answer) return [];
@@ -352,6 +406,12 @@ function shortTypedAnswers(q) {
     .trim();
   const words = cleaned.split(/\s+/).filter(Boolean);
   if (words.length <= 3 && cleaned.length <= 32 && !/[#()]|access-list/i.test(cleaned)) return [cleaned];
+  return [];
+}
+
+function enumerationAnswers(q) {
+  if (q.matching) return [...new Set(Object.values(q.matching.answers || {}))].filter(Boolean);
+  if (q.answers?.length > 1) return q.answers;
   return [];
 }
 
@@ -487,7 +547,7 @@ function renderQuestion() {
     return;
   }
 
-  if (q.mode === "fill" || q.mode === "definition") {
+  if (q.mode === "fill" || q.mode === "definition" || q.mode === "identification" || q.mode === "enumeration") {
     renderTypedQuestion(q);
     startTimer();
     return;
@@ -531,7 +591,7 @@ function renderTypedQuestion(q) {
   wrapper.className = "typed-answer";
   wrapper.innerHTML = `
     <label>
-      <span>${q.mode === "definition" ? "Term" : "Answer"}</span>
+      <span>${q.mode === "definition" || q.mode === "identification" ? "Term" : q.mode === "enumeration" ? "Answers" : "Answer"}</span>
       <input id="typedAnswerInput" type="text" autocomplete="off" spellcheck="false" placeholder="Type your answer" />
     </label>
   `;
@@ -625,7 +685,7 @@ function selectAnswer(choice, button) {
 function syncSubmitButton() {
   const q = state.session[state.index];
   if (state.answered) return;
-  if (q.mode === "fill" || q.mode === "definition") {
+  if (q.mode === "fill" || q.mode === "definition" || q.mode === "identification" || q.mode === "enumeration") {
     els.nextBtn.disabled = !state.typedAnswer.trim();
     return;
   }
@@ -653,6 +713,21 @@ function sameTypedAnswer(selected, correct) {
   return correct.some((answer) => typed === normalizeTyped(answer));
 }
 
+function normalizeTypedList(value) {
+  return value
+    .split(/[,;\n]+/)
+    .map(normalizeTyped)
+    .filter(Boolean);
+}
+
+function sameEnumerationAnswer(selected, correct) {
+  const typedItems = normalizeTypedList(selected || "");
+  if (!typedItems.length || typedItems.length !== correct.length) return false;
+  const picked = typedItems.sort();
+  const expected = correct.map(normalizeTyped).sort();
+  return expected.every((answer, index) => answer === picked[index]);
+}
+
 function sameMatching(selected, matching) {
   if (!selected || selected.length !== matching.targets.length) return false;
   return selected.every((item) => normalize(item.answer) === normalize(matching.answers[item.target]));
@@ -664,10 +739,10 @@ function answerQuestion(selected, timedOut) {
   state.answered = true;
 
   const q = state.session[state.index];
-  const correct = q.mode === "fill" || q.mode === "definition" ? sameTypedAnswer(selected, q.typedAnswers || q.answers) : q.matching ? sameMatching(selected, q.matching) : sameAnswers(selected, q.answers);
+  const correct = q.mode === "enumeration" ? sameEnumerationAnswer(selected, q.typedAnswers || q.answers) : q.mode === "fill" || q.mode === "definition" || q.mode === "identification" ? sameTypedAnswer(selected, q.typedAnswers || q.answers) : q.matching ? sameMatching(selected, q.matching) : sameAnswers(selected, q.answers);
   const buttons = [...els.answers.querySelectorAll(".answer-btn")];
 
-  if (q.mode === "fill" || q.mode === "definition") {
+  if (q.mode === "fill" || q.mode === "definition" || q.mode === "identification" || q.mode === "enumeration") {
     markTypedQuestion(correct);
   } else if (q.matching) {
     markMatchingQuestion(q, selected || []);
@@ -728,7 +803,7 @@ function markTypedQuestion(correct) {
 }
 
 function formatCorrectAnswer(q) {
-  if (q.mode === "fill" || q.mode === "definition") return q.typedAnswers?.join(" | ") || q.answers.join(" | ");
+  if (q.mode === "fill" || q.mode === "definition" || q.mode === "identification" || q.mode === "enumeration") return q.typedAnswers?.join(" | ") || q.answers.join(" | ");
   if (!q.matching) return q.answers.join(" | ");
   const targets = q.currentTargetOrder || q.matching.targets;
   return targets.map((target) => `${target} => ${q.matching.answers[target]}`).join(" | ");
@@ -738,7 +813,7 @@ function nextQuestion() {
   if (!state.session.length) return;
   if (!state.answered) {
     const q = state.session[state.index];
-    const selected = q.mode === "fill" || q.mode === "definition" ? state.typedAnswer : q.matching ? readMatchingSelection(els.answers.querySelector(".match-grid")) : [...state.selected];
+    const selected = q.mode === "fill" || q.mode === "definition" || q.mode === "identification" || q.mode === "enumeration" ? state.typedAnswer : q.matching ? readMatchingSelection(els.answers.querySelector(".match-grid")) : [...state.selected];
     answerQuestion(selected, false);
     return;
   }
@@ -780,17 +855,73 @@ function finishQuiz() {
   });
 }
 
-document.querySelectorAll(".topic-chip").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".topic-chip").forEach((chip) => chip.classList.remove("active"));
-    button.classList.add("active");
-    state.topic = button.dataset.topic;
-    updateBankSize();
+function selectedTopicValues() {
+  return [...els.topicSelectMenu.querySelectorAll("input:not([value='all']):checked")].map((input) => input.value);
+}
+
+function setAllTopics(checked) {
+  els.topicSelectMenu.querySelectorAll("input").forEach((input) => {
+    input.checked = checked;
   });
+}
+
+function updateTopicButton(values, allChecked) {
+  const label = els.topicSelectButton.querySelector("span");
+  if (allChecked) {
+    label.textContent = "All Lessons";
+  } else if (values.length === 1) {
+    label.textContent = values[0];
+  } else {
+    label.textContent = `${values.length} selected`;
+  }
+}
+
+function syncTopicSelection(changedInput = null) {
+  const allInput = els.topicSelectMenu.querySelector("input[value='all']");
+  const topicInputs = [...els.topicSelectMenu.querySelectorAll("input:not([value='all'])")];
+
+  if (changedInput === allInput) {
+    setAllTopics(allInput.checked);
+  } else {
+    allInput.checked = topicInputs.every((input) => input.checked);
+  }
+
+  let values = selectedTopicValues();
+  if (!values.length) {
+    setAllTopics(true);
+    values = selectedTopicValues();
+  }
+
+  if (allInput.checked || values.length === topicInputs.length) {
+    state.topics = new Set(["all"]);
+    updateTopicButton(values, true);
+  } else {
+    state.topics = new Set(values);
+    updateTopicButton(values, false);
+  }
+
+  updateBankSize();
+}
+
+els.topicSelectButton.addEventListener("click", () => {
+  const isOpen = els.topicSelect.classList.toggle("open");
+  els.topicSelectButton.setAttribute("aria-expanded", String(isOpen));
+});
+
+els.topicSelectMenu.querySelectorAll("input").forEach((input) => {
+  input.addEventListener("change", () => syncTopicSelection(input));
+});
+
+document.addEventListener("click", (event) => {
+  if (els.topicSelect.contains(event.target)) return;
+  els.topicSelect.classList.remove("open");
+  els.topicSelectButton.setAttribute("aria-expanded", "false");
 });
 
 els.fillBlankMode.addEventListener("change", updateBankSize);
 els.definitionMode.addEventListener("change", updateBankSize);
+els.identificationMode.addEventListener("change", updateBankSize);
+els.enumerationMode.addEventListener("change", updateBankSize);
 els.startBtn.addEventListener("click", () => startQuiz());
 els.soundToggle.addEventListener("click", () => {
   state.soundOn = !state.soundOn;

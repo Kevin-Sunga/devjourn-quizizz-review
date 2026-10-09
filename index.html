@@ -46,17 +46,26 @@
               </label>
             </div>
 
-            <div class="topic-picker" aria-label="Topic filters">
-              <button class="topic-chip active" data-topic="all" type="button">All Lessons</button>
-              <button class="topic-chip" data-topic="Lesson 1" type="button">Lesson 1</button>
-              <button class="topic-chip" data-topic="Lesson 2" type="button">Lesson 2</button>
-              <button class="topic-chip" data-topic="Lesson 3" type="button">Lesson 3</button>
-              <button class="topic-chip" data-topic="Lesson 4" type="button">Lesson 4</button>
-              <button class="topic-chip" data-topic="Development Journalism" type="button">DevJourn</button>
-              <button class="topic-chip" data-topic="Press Theories" type="button">Press Theories</button>
-              <button class="topic-chip" data-topic="DevComm Theories" type="button">DevComm</button>
-              <button class="topic-chip" data-topic="ICT4D" type="button">ICT4D</button>
-              <button class="topic-chip" data-topic="Writing" type="button">Writing</button>
+            <div class="topic-select-label">
+              <span>Lessons and topics</span>
+              <div class="topic-select" id="topicSelect">
+                <button class="topic-select-button" id="topicSelectButton" type="button" aria-expanded="false">
+                  <span>All Lessons</span>
+                  <b aria-hidden="true">v</b>
+                </button>
+                <div class="topic-select-menu" id="topicSelectMenu">
+                  <label><input type="checkbox" value="all" checked /> All Lessons</label>
+                  <label><input type="checkbox" value="Lesson 1" checked /> Lesson 1</label>
+                  <label><input type="checkbox" value="Lesson 2" checked /> Lesson 2</label>
+                  <label><input type="checkbox" value="Lesson 3" checked /> Lesson 3</label>
+                  <label><input type="checkbox" value="Lesson 4" checked /> Lesson 4</label>
+                  <label><input type="checkbox" value="Development Journalism" checked /> DevJourn</label>
+                  <label><input type="checkbox" value="Press Theories" checked /> Press Theories</label>
+                  <label><input type="checkbox" value="DevComm Theories" checked /> DevComm</label>
+                  <label><input type="checkbox" value="ICT4D" checked /> ICT4D</label>
+                  <label><input type="checkbox" value="Writing" checked /> Writing</label>
+                </div>
+              </div>
             </div>
 
             <div class="mode-options" aria-label="Question type options">
@@ -72,6 +81,20 @@
                 <span>
                   <strong>Definition of terms</strong>
                   <small>Guess the term from the explanation.</small>
+                </span>
+              </label>
+              <label class="mode-toggle">
+                <input id="identificationMode" type="checkbox" />
+                <span>
+                  <strong>Identification</strong>
+                  <small>Type the term being described.</small>
+                </span>
+              </label>
+              <label class="mode-toggle">
+                <input id="enumerationMode" type="checkbox" />
+                <span>
+                  <strong>Enumeration</strong>
+                  <small>Type list answers separated by commas.</small>
                 </span>
               </label>
             </div>
