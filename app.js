@@ -342,13 +342,40 @@ function makeFillBlankQuestion(q) {
   return {
     ...q,
     id: `${q.id || `${q.module}-${q.number}`}-fill`,
-    question: `${q.question}\n\nType the correct answer.`,
+    question: makeClozePrompt(q, typedAnswers) || `${q.question}\n\nType the correct answer.`,
     choices: [],
     matching: null,
     mode: "fill",
     typedAnswers,
     sourceMode: "Fill in the blanks"
   };
+}
+
+function makeClozePrompt(q, typedAnswers) {
+  const candidates = [q.explanation, q.raw, q.question]
+    .filter(Boolean)
+    .flatMap((text) => splitSentences(text));
+  const variants = [];
+
+  typedAnswers.forEach((answer) => {
+    candidates.forEach((sentence) => {
+      const blanked = blankAnswer(sentence, answer);
+      if (blanked !== sentence && blanked.includes("_____")) {
+        variants.push(`${blanked}\n\nType the correct answer.`);
+      }
+    });
+  });
+
+  return variants.length ? shuffle(variants)[0] : "";
+}
+
+function splitSentences(text) {
+  return text
+    .replace(/^Explanation:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.?!])\s+|\n+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 24 && sentence.length <= 220);
 }
 
 function makeDefinitionQuestion(q) {
