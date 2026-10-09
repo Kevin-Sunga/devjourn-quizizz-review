@@ -492,12 +492,80 @@ function blankAnswer(text, answer) {
   return text.replace(new RegExp(escaped, "gi"), "_____");
 }
 
+function cleanQuestionPrompt(question) {
+  return question
+    .replace(/^\d+\.\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function questionClue(q) {
+  const answers = q.answers?.length ? q.answers : q.typedAnswers || [];
+  let clue = definitionClue(q);
+  answers.forEach((answer) => {
+    clue = blankAnswer(clue, answer);
+  });
+  return clue.replace(/\s+/g, " ").trim();
+}
+
+function answerPhrase(q) {
+  const answers = q.answers?.length ? q.answers : q.typedAnswers || [];
+  if (!answers.length) return "";
+  if (answers.length === 1) return answers[0];
+  if (answers.length === 2) return `${answers[0]} and ${answers[1]}`;
+  return `${answers.slice(0, -1).join(", ")}, and ${answers[answers.length - 1]}`;
+}
+
+function makeQuestionVariant(q) {
+  if (!q.gradable || q.mode || q.matching) {
+    if (!q.matching) return { ...q };
+    const matchingPrompts = [
+      q.question,
+      `${cleanQuestionPrompt(q.question)}\n\nMatch each item to the reviewer wording.`,
+      `Use the reviewer notes to match these related ideas.\n\n${cleanQuestionPrompt(q.question)}`
+    ];
+    return { ...q, question: shuffle(matchingPrompts)[0] };
+  }
+
+  const answers = q.answers || [];
+  const clue = questionClue(q);
+  const prompt = cleanQuestionPrompt(q.question);
+  const sourceSentence = splitSentences(q.raw || q.explanation || "").find((sentence) => sentence.length >= 28) || clue;
+  const variants = [q.question];
+
+  if (answers.length === 1) {
+    const blankedSource = blankAnswer(sourceSentence, answers[0]);
+    if (blankedSource.includes("_____")) {
+      variants.push(
+        `Which answer best completes this reviewer idea?\n\n${blankedSource}`,
+        `A classmate says: "${blankedSource}"\n\nWhich option correctly fills the blank?`
+      );
+    }
+    if (clue.includes("_____")) {
+      variants.push(
+        `Based on the reviewer, identify the concept or answer:\n\n${clue}`,
+        `What does this reviewer note point to?\n\n${clue}`
+      );
+    }
+    variants.push(`Answer this reviewer check in a different form:\n\n${prompt}`);
+  } else if (answers.length > 1) {
+    variants.push(
+      `Which choices belong with this reviewer idea?\n\n${prompt}`,
+      `Select every answer that correctly completes the reviewer note:\n\n${questionClue(q)}`,
+      `A reviewer summary points to ${answers.length} correct items: ${answerPhrase(q).replace(/./g, "_").slice(0, Math.min(64, answerPhrase(q).length))}\n\nChoose the matching items from the options.`,
+      `Which ${answers.length} items are supported by the PDF notes?\n\n${prompt}`
+    );
+  }
+
+  return { ...q, question: shuffle(variants.filter(Boolean))[0] };
+}
+
 function buildSession(source = null) {
   const bank = source || buildPracticeBank();
 
   const requested = els.questionCount.value;
   const count = requested === "all" ? bank.length : Number(requested);
-  state.session = shuffle(bank).slice(0, count);
+  state.session = shuffle(bank).slice(0, count).map(makeQuestionVariant);
   state.index = 0;
   state.missed = [];
   state.score = 0;
